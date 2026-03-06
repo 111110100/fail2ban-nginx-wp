@@ -75,6 +75,7 @@ sudo vim /etc/fail2ban/filter.d/nginx-403.conf
 ```
 #### nginx-403.conf
 ```bash
+[Definition]
 failregex = ^ - .\* "(GET|POST|HEAD).\*" 403
 ignoreregex =
 ```
@@ -86,6 +87,7 @@ sudo vim /etc/fail2ban/filter.d/nginx-badbots.conf
 ```
 #### nginx-badbots.conf
 ```bash
+[Definition]
 failregex = ^ -.\*"(GET|POST|HEAD).\*HTTP.\*" .\* "(.\*(sqlmap|nikto|masscan|dirbuster|nmap|wpscan).\*)"
 ignoreregex =
 ```
@@ -97,6 +99,7 @@ sudo vim /etc/fail2ban/filter.d/nginx-noscript.conf
 ```
 #### nginx-noscript.conf
 ```bash
+[Definition]
 failregex = ^ -.\*"(GET|POST).\*\\/(uploads|files|images)\\/.\*\\.php
 ignoreregex =
 ```
@@ -109,7 +112,9 @@ sudo vim /etc/fail2ban/filter.d/nginx-limit-req.conf
 ```
 #### nginx-limit-req.conf
 ```bash
-failregex = limiting requests, excess:.\* by zone.\* client: ignoreregex =
+[Definition]
+failregex = limiting requests, excess:.\* by zone.\* client:
+ignoreregex =
 ```
 \---
 
@@ -121,6 +126,7 @@ sudo vim /etc/fail2ban/filter.d/nginx-wp-login.conf
 ```
 #### nginx-wp-login.conf
 ```bash
+[Definition]
 failregex = ^ -.\*"(POST|GET).\*wp-login.php
 ignoreregex =
 ```
@@ -134,6 +140,7 @@ sudo vim /etc/fail2ban/filter.d/nginx-wp-json.conf
 ```
 #### nginx-wp-json.conf
 ```bash
+[Definition]
 failregex = ^ -.\*"(GET|POST).\*\\/wp-json\\/.\*
 ignoreregex =
 ```
