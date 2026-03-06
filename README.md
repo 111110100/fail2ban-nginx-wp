@@ -243,7 +243,7 @@ Check active jails:
 sudo fail2ban-client status
 ```
 Expected:
-
+```bash
 nginx-403
 nginx-badbots
 nginx-noscript
@@ -251,7 +251,7 @@ nginx-limit-req
 nginx-wp-login
 nginx-wp-json
 recidive
-
+```
 - - -
 
 ## 8 Testing Each Jail
