@@ -71,7 +71,7 @@ Location:
 
 ### nginx-403
 ```bash
-sudo nano /etc/fail2ban/filter.d/nginx-403.conf
+sudo vim /etc/fail2ban/filter.d/nginx-403.conf
 ```
 #### nginx-403.conf
 ```bash
@@ -82,7 +82,7 @@ ignoreregex =
 
 ### nginx-badbots
 ```bash
-sudo nano /etc/fail2ban/filter.d/nginx-badbots.conf
+sudo vim /etc/fail2ban/filter.d/nginx-badbots.conf
 ```
 #### nginx-badbots.conf
 ```bash
@@ -93,7 +93,7 @@ ignoreregex =
 
 ### nginx-noscript
 ```bash
-sudo nano /etc/fail2ban/filter.d/nginx-noscript.conf
+sudo vim /etc/fail2ban/filter.d/nginx-noscript.conf
 ```
 #### nginx-noscript.conf
 ```bash
@@ -105,7 +105,7 @@ ignoreregex =
 
 ### nginx-limit-req
 ```bash
-sudo nano /etc/fail2ban/filter.d/nginx-limit-req.conf
+sudo vim /etc/fail2ban/filter.d/nginx-limit-req.conf
 ```
 #### nginx-limit-req.conf
 ```bash
@@ -117,7 +117,7 @@ failregex = limiting requests, excess:.\* by zone.\* client: ignoreregex =
 
 Blocks brute force attacks against WordPress login.
 ```bash
-sudo nano /etc/fail2ban/filter.d/nginx-wp-login.conf
+sudo vim /etc/fail2ban/filter.d/nginx-wp-login.conf
 ```
 #### nginx-wp-login.conf
 ```bash
@@ -130,7 +130,7 @@ ignoreregex =
 
 Blocks scanners probing WordPress REST API.
 ```bash
-sudo nano /etc/fail2ban/filter.d/nginx-wp-json.conf
+sudo vim /etc/fail2ban/filter.d/nginx-wp-json.conf
 ```
 #### nginx-wp-json.conf
 ```bash
@@ -145,7 +145,7 @@ ignoreregex =
 
 Create:
 ```bash
-sudo nano /etc/fail2ban/jail.d/nginx-protection.local
+sudo vim /etc/fail2ban/jail.d/nginx-protection.local
 ```
 #### nginx-protection.local
 ```bash
@@ -214,7 +214,7 @@ action = ufw
 
 This jail monitors the Fail2ban log itself and permanently bans IPs that repeatedly trigger bans. Create:
 ```bash
-sudo nano /etc/fail2ban/jail.d/recidive.local
+sudo vim /etc/fail2ban/jail.d/recidive.local
 ```
 #### recidive.local
 ```bash
