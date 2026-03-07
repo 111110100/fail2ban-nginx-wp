@@ -121,7 +121,7 @@ EOF
 
 cat > /etc/fail2ban/filter.d/nginx-honeypot.conf <<'EOF'
 [Definition]
-failregex = ^<HOST> -.*"(GET|POST|HEAD).*"
+failregex = ^<HOST> -.*"(GET|POST|HEAD).*" 403
 ignoreregex =
 EOF
 
