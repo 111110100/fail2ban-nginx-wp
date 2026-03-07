@@ -1,345 +1,499 @@
- Fail2ban + Nginx + UFW WordPress Security Guide
+ Fail2Ban + Nginx + UFW Security Guide 
 
-# Fail2ban + Nginx + UFW Security Hardening
+Fail2Ban + Nginx + UFW Security Hardening Guide
+===============================================
 
-This guide configures Fail2ban to automatically block malicious traffic detected in Nginx logs.
+Goal
+----
 
-## Jails Implemented
+This guide configures a hardened web server stack that:
 
-*   nginx-403
-*   nginx-badbots
-*   nginx-noscript
-*   nginx-limit-req
-*   nginx-wp-login
-*   nginx-wp-json
-*   recidive (permanent bans)
+* Monitors `/var/log/nginx/*access.log`
+* Detects repeated **403 errors**
+* Blocks offending IP addresses using **UFW**
+* Detects malicious bots
+* Stops WordPress enumeration attacks
+* Blocks vulnerability scanners probing `/wp-json/`
+* Stops brute force attempts on `/wp-login.php`
+* Permanently bans repeat offenders
 
-- - -
+1\. Install Required Packages
+-----------------------------
 
-## 1 Install Dependencies
-```bash
 sudo apt update
-sudo apt install fail2ban ufw
+sudo apt install fail2ban ufw -y
 
-Verify installation:
+2\. Enable UFW Firewall
+-----------------------
 
-fail2ban-client -V
-```
-- - -
-
-## 2 Configure UFW Firewall
-
-Allow essential services:
 ```bash
-sudo ufw allow ssh
-sudo ufw allow http
-sudo ufw allow https
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
 
-Enable firewall:
+sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'
 
 sudo ufw enable
 ```
-Verify:
-```bash
-sudo ufw status verbose
-```
-- - -
 
-## 3 Confirm Nginx Logs
+Check status:
 
-Fail2ban will monitor all access logs:
 ```bash
-/var/log/nginx/\*access.log
-```
-Error logs:
-```bash
-/var/log/nginx/error.log
-```
-Test logging:
-```bash
-tail -f /var/log/nginx/access.log
-```
-- - -
-
-## 4 Create Fail2ban Filters
-
-Location:
-
-/etc/fail2ban/filter.d/
-
-\---
-
-### nginx-403
-```bash
-sudo vim /etc/fail2ban/filter.d/nginx-403.conf
-```
-#### nginx-403.conf
-```bash
-[Definition]
-failregex = ^ - .\* "(GET|POST|HEAD).\*" 403
-ignoreregex =
-```
-\---
-
-### nginx-badbots
-```bash
-sudo vim /etc/fail2ban/filter.d/nginx-badbots.conf
-```
-#### nginx-badbots.conf
-```bash
-[Definition]
-failregex = ^ -.\*"(GET|POST|HEAD).\*HTTP.\*" .\* "(.\*(sqlmap|nikto|masscan|dirbuster|nmap|wpscan).\*)"
-ignoreregex =
-```
-\---
-
-### nginx-noscript
-```bash
-sudo vim /etc/fail2ban/filter.d/nginx-noscript.conf
-```
-#### nginx-noscript.conf
-```bash
-[Definition]
-failregex = ^ -.\*"(GET|POST).\*\\/(uploads|files|images)\\/.\*\\.php
-ignoreregex =
+sudo ufw status
 ```
 
-\---
+3\. Configure Fail2Ban to Use UFW
+---------------------------------
 
-### nginx-limit-req
+Create the local jail configuration.
+
 ```bash
-sudo vim /etc/fail2ban/filter.d/nginx-limit-req.conf
+sudo vim /etc/fail2ban/jail.local
 ```
-#### nginx-limit-req.conf
+
+Add:
+
 ```bash
-[Definition]
-failregex = limiting requests, excess:.\* by zone.\* client:
-ignoreregex =
+[DEFAULT]
+
+banaction = ufw
+bantime = 1h
+findtime = 10m
+maxretry = 5
+
+ignoreip = 127.0.0.1/8
 ```
-\---
 
-### nginx-wp-login
+4\. Create Custom Nginx Protection Jails
+----------------------------------------
 
-Blocks brute force attacks against WordPress login.
-```bash
-sudo vim /etc/fail2ban/filter.d/nginx-wp-login.conf
-```
-#### nginx-wp-login.conf
-```bash
-[Definition]
-failregex = ^ -.\*"(POST|GET).\*wp-login.php
-ignoreregex =
-```
-\---
+Create the jail file.
 
-### nginx-wp-json
-
-Blocks scanners probing WordPress REST API.
-```bash
-sudo vim /etc/fail2ban/filter.d/nginx-wp-json.conf
-```
-#### nginx-wp-json.conf
-```bash
-[Definition]
-failregex = ^ -.\*"(GET|POST).\*\\/wp-json\\/.\*
-ignoreregex =
-```
-\---
-
-- - -
-
-## 5 Configure Jails
-
-Create:
 ```bash
 sudo vim /etc/fail2ban/jail.d/nginx-protection.local
 ```
-#### nginx-protection.local
 ```bash
 [nginx-403]
 enabled = true
 filter = nginx-403
-logpath = /var/log/nginx/\*access.log
+port = http,https
+logpath = /var/log/nginx/*access.log
 maxretry = 10
-findtime = 60
-bantime = 3600
-action = ufw
-
-
-[nginx-badbots]
-enabled = true
-filter = nginx-badbots
-logpath = /var/log/nginx/\*access.log
-maxretry = 2
-findtime = 3600
-bantime = 86400
-action = ufw
-
+findtime = 10m
+bantime = 1h
 
 [nginx-noscript]
 enabled = true
+port = http,https
 filter = nginx-noscript
-logpath = /var/log/nginx/\*access.log
-maxretry = 2
-findtime = 600
-bantime = 86400
-action = ufw
+logpath = /var/log/nginx/*access.log
+maxretry = 6
 
+[nginx-badbots]
+enabled = true
+port = http,https
+filter = nginx-badbots
+logpath = /var/log/nginx/*access.log
+maxretry = 2
 
 [nginx-limit-req]
 enabled = true
+port = http,https
 filter = nginx-limit-req
-logpath = /var/log/nginx/error.log
-maxretry = 10
-findtime = 60
-bantime = 3600
-action = ufw
-
+logpath = /var/log/nginx/*error.log
+maxretry = 5
 
 [nginx-wp-login]
 enabled = true
 filter = nginx-wp-login
-logpath = /var/log/nginx/\*access.log
-maxretry = 5
-findtime = 300
-bantime = 86400
-action = ufw
-
+port = http,https
+logpath = /var/log/nginx/*access.log
+maxretry = 6
+findtime = 10m
+bantime = 2h
 
 [nginx-wp-json]
 enabled = true
 filter = nginx-wp-json
-logpath = /var/log/nginx/\*access.log
-maxretry = 10
-findtime = 60
-bantime = 86400
-action = ufw
+port = http,https
+logpath = /var/log/nginx/*access.log
+maxretry = 4
+findtime = 10m
+bantime = 1h
 ```
-- - -
 
-## 6 Permanent Bans for Repeat Offenders (Recidive Jail)
+5\. Create Custom Filters
+-------------------------
 
-This jail monitors the Fail2ban log itself and permanently bans IPs that repeatedly trigger bans. Create:
+### 403 Scanner Detection
+
+```bash
+sudo vim /etc/fail2ban/filter.d/nginx-403.conf
+```
+
+```bash
+[Definition]
+failregex = ^ .\* "(GET|POST).*" 403
+ignoreregex =
+```
+
+* * *
+
+### WordPress Login Bruteforce
+
+```bash
+sudo vim /etc/fail2ban/filter.d/nginx-wp-login.conf
+```
+```bash
+[Definition]
+failregex = ^ .\* "(POST|GET) /wp-login.php.*" (200|403|404)
+ignoreregex =
+```
+
+* * *
+
+### WordPress JSON Enumeration
+
+```bash
+sudo vim /etc/fail2ban/filter.d/nginx-wp-json.conf
+```
+```bash
+[Definition]
+failregex = ^ .\* "(GET|POST) /wp-json/.*"
+ignoreregex =
+```
+
+6\. Permanent Bans for Repeat Offenders (Recidive Jail)
+-------------------------------------------------------
+
+Create the configuration:
+
 ```bash
 sudo vim /etc/fail2ban/jail.d/recidive.local
 ```
-#### recidive.local
 ```bash
 [recidive]
 
 enabled = true
+filter = recidive
 logpath = /var/log/fail2ban.log
-banaction = ufw
-bantime = -1
-findtime = 86400
+bantime = 1w
+findtime = 1d
 maxretry = 5
 ```
-Meaning:
 
-*   If an IP is banned 5 times in 24 hours
-*   It is permanently banned
+This jail permanently bans IPs that repeatedly trigger Fail2Ban.
 
-- - -
+7\. Restart Services
+--------------------
 
-## 7 Restart Fail2ban
 ```bash
 sudo systemctl restart fail2ban
+sudo systemctl enable fail2ban
 ```
-Check active jails:
+
+Check status:
+
+```bash
+sudo systemctl status fail2ban
+```
+
+8\. Verify Active Jails
+-----------------------
+
 ```bash
 sudo fail2ban-client status
 ```
-Expected:
-```bash
-nginx-403
-nginx-badbots
-nginx-noscript
-nginx-limit-req
-nginx-wp-login
-nginx-wp-json
-recidive
-```
-- - -
 
-## 8 Testing Each Jail
+Expected output should include:
 
-### Test nginx-403
+* nginx-403
+* nginx-badbots
+* nginx-noscript
+* nginx-limit-req
+* nginx-wp-login
+* nginx-wp-json
+* recidive
+
+9\. Testing Fail2Ban
+--------------------
+
+### Trigger a 403 Ban
+
+Run repeatedly from a test machine:
+
 ```bash
-for i in {1..20}; do
-curl http://YOURSERVER/.env
+for i in {1..100}; do
+curl -I https://yourdomain.com/admin
 done
 ```
-\---
 
-### Test Bad Bots
+After enough attempts, check:
+
 ```bash
-curl -A "sqlmap" http://YOURSERVER
+sudo fail2ban-client status nginx-403
 ```
-\---
 
-### Test PHP Upload Attack
-```bash
-curl http://YOURSERVER/uploads/shell.php
-```
-\---
+10\. Confirm Firewall Blocking
+------------------------------
 
-### Test WordPress Login
-```bash
-for i in {1..10}; do
-curl http://YOURSERVER/wp-login.php
-done
-```
-\---
+Check blocked IPs:
 
-### Test WordPress JSON Scanning
-```bash
-for i in {1..20}; do
-curl http://YOURSERVER/wp-json/wp/v2/users
-done
-```
-\---
-
-### Test Rate Limiting
-```bash
-ab -n 200 -c 50 http://YOURSERVER/
-```
-\---
-
-- - -
-
-## 9 Verify Firewall Blocking
 ```bash
 sudo ufw status numbered
 ```
-Example:
-```bash
-DENY IN 203.0.113.45
-```
-\---
 
-## 10 View Fail2ban Logs
+You should see rules similar to:
+
+```bash
+DENY IN 192.168.1.10
+```
+
+11\. Debugging Fail2Ban
+-----------------------
+
+Check logs:
+
 ```bash
 sudo tail -f /var/log/fail2ban.log
 ```
-Example:
-```bash
-Ban 203.0.113.100
-```
-\---
 
-## 11 Unban an IP
-```bash
-sudo fail2ban-client set nginx-403 unbanip IPADDRESS
-```
-Example:
-```bash
-sudo fail2ban-client set nginx-403 unbanip 192.168.1.100
-```
-\---
+Test filters manually:
 
-### Recommended Production Hardening
+```bash
+sudo fail2ban-regex /var/log/nginx/access.log /etc/fail2ban/filter.d/nginx-403.conf
+```
 
-*   Increase bantime to 24–72 hours
-*   Whitelist trusted IPs with ignoreip
-*   Combine with Nginx rate limiting
-*   Monitor logs regularly
+Check a jail:
+
+```bash
+sudo fail2ban-client status nginx-403
+```
+
+Unban IP:
+
+```bash
+sudo fail2ban-client set nginx-403 unbanip 1.2.3.4
+```
+
+12\. Security Result
+--------------------
+
+This setup protects your server from:
+
+* Directory scanners
+* Vulnerability scanners
+* WordPress enumeration
+* WordPress login brute force
+* Bad bots
+* Script injection attempts
+* Repeat attackers
+
+13\. Block Sensitive File Probing
+---------------------------------
+
+Attackers commonly scan for exposed secrets like:
+
+* .env
+* .git
+* .aws
+* .DS_Store
+* composer.json
+* database backups
+
+These probes are almost always malicious.
+
+### Create Filter
+
+```bash
+sudo vim /etc/fail2ban/filter.d/nginx-sensitive-files.conf
+```
+```bash
+[Definition]
+
+failregex = ^ .\* "(GET|POST).*\\.env.*
+            ^ .\* "(GET|POST).*\\.git.*
+            ^ .\* "(GET|POST).*\\.aws.*
+            ^ .\* "(GET|POST).*\\.DS_Store.*
+            ^ .\* "(GET|POST).\*composer\\.json.\*
+            ^ .\* "(GET|POST).\*backup.\*
+            ^ .\* "(GET|POST).\*database.\*
+
+ignoreregex = 
+```
+
+### Add Jail
+
+Edit:
+```bash
+sudo vim /etc/fail2ban/jail.d/nginx-protection.local
+```
+
+Add:
+```bash
+[nginx-sensitive-files]
+
+enabled = true
+port = http,https
+filter = nginx-sensitive-files
+logpath = /var/log/nginx/*access.log
+maxretry = 1
+bantime = 24h
+```
+
+Any probe for these files results in an immediate ban.
+
+14\. Nginx Honeypot Trap
+------------------------
+
+A honeypot endpoint is a fake URL that no legitimate user should access. Bots and scanners will hit it almost instantly.
+
+### Create Honeypot Endpoint
+
+Edit your Nginx site configuration:
+
+```bash
+sudo vim /etc/nginx/sites-enabled/default
+```
+
+Add inside the server block:
+
+```bash
+location /wp-admin/install.php {
+
+    access_log /var/log/nginx/honeypot.log;
+    return 444;
+
+}
+```
+
+Explanation:
+
+* Real WordPress installs never access this page after installation
+* Attack scanners probe it frequently
+* Nginx returns `444` (connection closed)
+
+Reload Nginx:
+
+```bash
+sudo systemctl reload nginx
+```
+
+### Create Fail2Ban Filter
+
+```bash
+sudo vim /etc/fail2ban/filter.d/nginx-honeypot.conf
+```
+```bash
+[Definition]
+
+failregex = ^ .\* "(GET|POST) /wp-admin/install.php.*
+
+ignoreregex =
+```
+
+### Create Jail
+
+```bash
+sudo vim /etc/fail2ban/jail.d/nginx-honeypot.local
+```
+```bash
+[nginx-honeypot]
+
+enabled = true
+port = http,https
+filter = nginx-honeypot
+logpath = /var/log/nginx/*access.log
+maxretry = 1
+bantime = 48h
+```
+
+Any bot touching the honeypot gets banned immediately.
+
+15\. Nginx Rate Limiting Integrated with Fail2Ban
+-------------------------------------------------
+
+Rate limiting slows brute force attacks and triggers Fail2Ban bans.
+
+### Add Rate Limit Zone
+
+Edit:
+```bash
+sudo vim /etc/nginx/nginx.conf
+```
+Inside the `http` block add:
+```bash
+limit\_req\_zone $binary\_remote\_addr zone=loginlimit:10m rate=5r/m;
+```
+### Protect WordPress Login
+
+In your site config:
+```bash
+location = /wp-login.php {
+
+    limit_req zone=loginlimit burst=10 nodelay;
+
+    include fastcgi_params;
+    fastcgi_pass php;
+}
+```
+When limits are exceeded Nginx logs errors like:
+```bash
+limiting requests, excess: 10.000 by zone "loginlimit"
+```
+Fail2Ban's \*\*nginx-limit-req jail\*\* will detect these and ban the IP. Reload Nginx:
+```bash
+sudo systemctl reload nginx
+```
+16\. Testing the Advanced Protections
+-------------------------------------
+
+### Test Sensitive File Ban
+
+From another machine run:
+```bash
+curl http://yourdomain.com/.env
+```
+Check Fail2Ban:
+```bash
+sudo fail2ban-client status nginx-sensitive-files
+```
+17\. Test Honeypot Ban
+----------------------
+
+Run:
+```bash
+curl http://yourdomain.com/wp-admin/install.php
+```
+Check jail:
+```bash
+sudo fail2ban-client status nginx-honeypot
+```
+18\. Test Rate Limit Ban
+------------------------
+
+Send rapid requests:
+```bash
+for i in {1..50}; do
+curl http://yourdomain.com/wp-login.php
+done
+```
+Check:
+```bash
+sudo fail2ban-client status nginx-limit-req
+```
+19\. Final Security Coverage
+----------------------------
+
+With these additions the server automatically blocks:
+
+* Vulnerability scanners
+* WordPress enumeration
+* WordPress brute force attacks
+* Bad bots
+* Sensitive file probes
+* Reconnaissance scanners
+* Rate-limit abuse
+* Repeat offenders
+
+This setup dramatically reduces automated attack traffic on public web servers.
