@@ -66,9 +66,15 @@ To prevent a specific IP from ever being banned, add it to
 ignoreip = 127.0.0.1/8 ::1 <YOUR_IP_HERE>
 ```
 
+### FORCE FLUSH
+To flush everything and restart services:
+```bash
+systemctl restart ufw && systemctl stop fail2ban && rm -f /var/lib/fail2ban/fail2ban.sqlite3 && systemctl start fail2ban
+```
+
 ## IMPORTANT NOTES
 - **REAL IP**: Ensure your Nginx domain configurations include
 `include snippets/security-traps.conf;` within their server blocks.
 - **SSH SAFETY**: The script automatically allows SSH (Port 22). If you use a custom SSH port, update the script before running.
-- **LOG ROTATION**: Ensure your /etc/logrotate.d/nginx configuration
+- **LOG ROTATION**: Ensure your `/etc/logrotate.d/nginx` configuration
 handles the new `honeypot.log`.
