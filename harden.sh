@@ -5,7 +5,7 @@ set -e
 # --- CONFIGURATION (FILL THESE IN) ---
 CF_ACCOUNT_ID=""
 CF_API_TOKEN=""
-MY_IP="203.132.68.49" # Your Australian IP to prevent self-lockout
+MY_IP="" # Your home IP to prevent self-lockout
 # -------------------------------------
 
 echo "===================================="
