@@ -2,36 +2,35 @@
 
 set -e
 
+# --- CONFIGURATION (FILL THESE IN) ---
+CF_ACCOUNT_ID=""
+CF_API_TOKEN=""
+MY_IP="203.132.68.49" # Your Australian IP to prevent self-lockout
+# -------------------------------------
+
 echo "===================================="
-echo " NGINX + FAIL2BAN HARDENING SCRIPT "
+echo " MASTER NGINX + CF SECURITY SETUP "
 echo "===================================="
 
+# 1. Root Check
 if [ "$EUID" -ne 0 ]; then
-  echo "Please run as root (sudo)"
+  echo "Error: Please run as root (sudo)"
   exit 1
 fi
 
-# Helper function to check if package is installed
+# 2. Cloudflare Variable Check
+if [[ -z "$CF_ACCOUNT_ID" || -z "$CF_API_TOKEN" ]]; then
+  echo "Error: CF_ACCOUNT_ID or CF_API_TOKEN is blank."
+  echo "Please edit the script and add your Cloudflare credentials."
+  exit 1
+fi
+
+# 3. Intelligent Package Installation
 is_installed() {
     dpkg -s "$1" >/dev/null 2>&1
 }
 
-BACKUP_DIR="/root/server-security-backup-$(date +%s)"
-mkdir -p "$BACKUP_DIR"
-
-echo "Backup directory: $BACKUP_DIR"
-
-backup_file() {
-    if [ -f "$1" ]; then
-        cp "$1" "$BACKUP_DIR/"
-    fi
-}
-
-########################################
-# INSTALLATION CHECK
-########################################
-
-PACKAGES=("fail2ban" "ufw" "nginx" "curl")
+PACKAGES=("nginx" "fail2ban" "ufw" "jq" "curl")
 TO_INSTALL=()
 
 for pkg in "${PACKAGES[@]}"; do
@@ -49,127 +48,77 @@ if [ ${#TO_INSTALL[@]} -ne 0 ]; then
     apt install -y "${TO_INSTALL[@]}"
 fi
 
-systemctl enable nginx
-systemctl enable fail2ban
+# 4. Configure Cloudflare API Action
+cat > /etc/fail2ban/action.d/cloudflare.conf <<'EOF'
+[Definition]
+actionban = curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/<cfaccount>/firewall/access_rules/rules" \
+            -H "Authorization: Bearer <cftoken>" \
+            -H "Content-Type: application/json" \
+            --data '{"mode":"block","configuration":{"target":"ip","value":"<ip>"},"notes":"Fail2Ban Global: <jailname>"}'
 
-########################################
-# UFW CONFIGURATION
-########################################
+actionunban = id=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/<cfaccount>/firewall/access_rules/rules?configuration.target=ip&configuration.value=<ip>&mode=block" \
+              -H "Authorization: Bearer <cftoken>" \
+              -H "Content-Type: application/json" | jq -r '.result[0].id'); \
+              if [ "$id" != "null" ] && [ "$id" != "" ]; then curl -s -X DELETE "https://api.cloudflare.com/client/v4/accounts/<cfaccount>/firewall/access_rules/rules/$id" \
+              -H "Authorization: Bearer <cftoken>" \
+              -H "Content-Type: application/json"; fi
+[Init]
+cftoken = 
+cfaccount = 
+EOF
 
-echo "Configuring firewall..."
-ufw allow ssh
-ufw allow 'Nginx Full'
-ufw --force enable
-
-########################################
-# FIX FAIL2BAN UFW ACTION (The "Error Banning" Fix)
-########################################
-
-echo "Updating Fail2Ban UFW action syntax..."
-# This avoids the "cannot open HOST" and "Bad source address" errors
+# 5. Configure UFW Action
 cat > /etc/fail2ban/action.d/ufw.conf <<'EOF'
 [Definition]
-actionstart = 
-actionstop = 
-actioncheck = 
 actionban = /usr/sbin/ufw insert 1 deny from <ip> to any
 actionunban = /usr/sbin/ufw delete deny from <ip> to any
 EOF
 
-########################################
-# CREATE NGINX HONEYPOT LOG
-########################################
-
-echo "Creating honeypot log..."
-touch /var/log/nginx/honeypot.log
-chmod 644 /var/log/nginx/honeypot.log
-chown www-data:adm /var/log/nginx/honeypot.log
-
-########################################
-# ADD NGINX SECURITY BLOCK
-########################################
-
-echo "Adding nginx scanner traps..."
-NGINX_CONF="/etc/nginx/snippets/security-traps.conf"
-backup_file $NGINX_CONF
-
-cat > $NGINX_CONF <<'EOF'
-# Scanner trap endpoints
-location ~* (\.env|\.git|\.aws|\.DS_Store|phpinfo\.php|composer\.json|vendor/phpunit|wp-admin/install\.php) {
-    access_log /var/log/nginx/honeypot.log;
-    return 403;
-}
-
-# Tarpit scanners
-location ~* (\.sql|\.bak|\.backup|\.old|\.tar|\.zip) {
-    limit_rate 1k;
-    return 403;
-}
-EOF
-
-########################################
-# FAIL2BAN FILTERS
-########################################
-
+# 6. Create Filters
 echo "Creating Fail2Ban filters..."
-
 cat > /etc/fail2ban/filter.d/nginx-403.conf <<'EOF'
 [Definition]
 failregex = ^<HOST> -.*"(GET|POST|HEAD).*" 403
-ignoreregex =
 EOF
 
 cat > /etc/fail2ban/filter.d/nginx-honeypot.conf <<'EOF'
 [Definition]
 failregex = ^<HOST> -.*"(GET|POST|HEAD).*" 403
-ignoreregex =
 EOF
 
 cat > /etc/fail2ban/filter.d/nginx-scanner.conf <<'EOF'
 [Definition]
 failregex = ^<HOST> .* "(GET|POST|HEAD).*(\.env|\.git/config|phpinfo\.php|\.aws|\.DS_Store|vendor/phpunit|composer\.json)
-ignoreregex =
 EOF
 
 cat > /etc/fail2ban/filter.d/nginx-sensitive-files.conf <<'EOF'
 [Definition]
 failregex = ^<HOST> .* "(GET|POST|HEAD).*\\.(env|git|aws|DS_Store|bak|sql)
-ignoreregex =
 EOF
 
 cat > /etc/fail2ban/filter.d/nginx-ai-scrapers.conf <<'EOF'
 [Definition]
 failregex = ^<HOST> .* "(GET|POST|HEAD).*" .*"(GPTBot|ChatGPT|ClaudeBot|Amazonbot|CCBot|anthropic-ai)"
-ignoreregex =
 EOF
 
-########################################
-# FAIL2BAN JAIL CONFIG
-########################################
+# 7. Global Jail Configuration
+echo "Configuring jail.local..."
+CF_IPV4=$(curl -s https://www.cloudflare.com/ips-v4)
+CF_IPV6=$(curl -s https://www.cloudflare.com/ips-v6)
+IGNORE_LIST=$(echo "$CF_IPV4 $CF_IPV6" | tr '\n' ' ')
 
-echo "Creating Fail2Ban jail configuration..."
-backup_file /etc/fail2ban/jail.local
-
-cat > /etc/fail2ban/jail.local <<'EOF'
+cat > /etc/fail2ban/jail.local <<EOF
 [DEFAULT]
-ignoreip = 127.0.0.1/8 ::1
-           173.245.48.0/20 103.21.244.0/22 103.22.200.0/22
-           103.31.4.0/22 141.101.64.0/18 108.162.192.0/18
-           190.93.240.0/20 188.114.96.0/20 197.234.240.0/22
-           198.41.128.0/17 162.158.0.0/15 104.16.0.0/13
-           104.24.0.0/14 172.64.0.0/13 131.0.72.0/22
-           2400:cb00::/32 2606:4700::/32 2803:f800::/32
-           2405:b500::/32 2405:8100::/32 2a06:98c0::/29
-           2c0f:f248::/32
-
+ignoreip = 127.0.0.1/8 ::1 $MY_IP $IGNORE_LIST
 bantime = 3600
 findtime = 600
 maxretry = 5
-backend = auto
 banaction = ufw
+            cloudflare[cftoken="$CF_API_TOKEN", cfaccount="$CF_ACCOUNT_ID"]
 
 [nginx-403]
 enabled = true
+port = http,https
 filter = nginx-403
 logpath = /var/log/nginx/*access.log
 maxretry = 10
@@ -210,28 +159,13 @@ findtime = 86400
 maxretry = 5
 EOF
 
-########################################
-# VALIDATE & RESTART
-########################################
-
-echo "Testing nginx configuration..."
-nginx -t
-
-echo "Restarting services..."
-systemctl restart nginx
-systemctl restart fail2ban
-
-echo "Waiting for Fail2Ban to initialize..."
-for i in {1..15}; do
-    if fail2ban-client ping >/dev/null 2>&1; then
-        echo "Fail2Ban is ready!"
-        break
-    fi
-    sleep 1
+# 8. UFW Whitelisting
+echo "Applying UFW whitelists..."
+ufw allow ssh
+for ip in $CF_IPV4 $CF_IPV6; do
+    ufw allow from "$ip" to any port 80,443 proto tcp comment 'Cloudflare IP'
 done
+ufw --force enable
 
-echo "===================================="
-echo " SECURITY INSTALLATION COMPLETE "
-echo "===================================="
-ufw status numbered
-fail2ban-client status
+systemctl restart fail2ban
+echo "Done."
