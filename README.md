@@ -82,6 +82,13 @@ To list blocked IPs on Cloudflare:
 ```bash
 cf-manage.sh list
 ```
+It will look something like this:
+```bash
+Fetching active blocks for Account: <YOUR ACCOUNT ID>
+[aeafb1a9df5741c7a5eefb8c7a1a1ad2] 146.190.63.48 - Fail2Ban:  (Created: 2026-03-09T10:28:45.438430241Z)
+[0e419716f9b941a8a93a994b9d2c8f76] 20.212.32.182 - Fail2Ban:  (Created: 2026-03-09T10:15:56.924370237Z)
+[789a7f3fc8514eec8468de8167a2cad7] 92.118.39.72 - Fail2Ban:  (Created: 2026-03-09T10:12:53.926739447Z)
+```
 
 #### BLOCK AN IP
 To manually block an IP
@@ -100,6 +107,26 @@ To show information about a blocked IP (Dae of block, country, network)
 ```bash
 cf-manage.sh info <IP>
 ```
+It will look something like this:
+```bash
+./cf-manage.sh info 222.108.0.231
+------------------------------------------------
+ LOGOUT & GEO LOOKUP FOR: 222.108.0.231
+------------------------------------------------
+Cloudflare Status: BLOCKED
+Rule ID: aa493982d7f34385bed093edb5432e95
+Notes: Fail2Ban:
+Created: 2026-03-09T09:56:41.466915704Z
+------------------------------------------------
+ GEOLOCATION & NETWORK INFO (via ip-api.com)
+------------------------------------------------
+Country:  South Korea (KR)
+Region:   Seoul (Guro-gu)
+ISP:      Korea Telecom
+Org:      AS4766 Korea Telecom
+Timezone: Asia/Seoul
+------------------------------------------------
+```
 
 #### AUTO-DELETE IP
 The script can automatically delete IPs that were banned after a certain amount of days has passed
@@ -110,8 +137,7 @@ cf-manage.sh clean <DAYS>
 #### SCHEDULE AUTO-DELETE IPS
 You can also schedule them using a cron:
 ```bash
-crontab -e
-0 0 * * * /path/to/cf-manage.sh clean 7 >> /var/log/cf-clean.log 2>&1
+(crontab -l 2>/dev/null; echo "0 0 * * * /path/to/cf-manage.sh clean 7 >> /var/log/cf-clean.log 2>&1") | crontab -
 ```
 will delete banned IPs from Cloudflare if they're older than 7 days
 
