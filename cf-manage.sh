@@ -18,7 +18,7 @@ fi
 
 usage() {
     echo "Usage: $0 {list|ban|unban|clean|info} [IP/Days]"
-    echo "  list          - List all active Account-level blocks"
+    echo "  list          - List ALL active Account-level blocks (paginated)"
     echo "  ban [IP]      - Ban an IP globally"
     echo "  unban [IP]    - Unban an IP globally"
     echo "  clean [days]  - Remove bans older than X days (default: 7)"
@@ -28,10 +28,33 @@ usage() {
 
 case "$1" in
     list)
-        echo "Fetching active blocks for Account: $CF_ACCOUNT_ID..."
-        curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/firewall/access_rules/rules?mode=block&per_page=100" \
-             -H "Authorization: Bearer $CF_API_TOKEN" \
-             -H "Content-Type: application/json" | jq -r '.result[] | "[\(.id)] \(.configuration.value) - \(.notes) (Created: \(.created_on))"'
+        echo "Fetching all active blocks for Account: $CF_ACCOUNT_ID..."
+        PAGE=1
+        TOTAL_COUNT=0
+
+        while true; do
+            RESPONSE=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/firewall/access_rules/rules?mode=block&per_page=100&page=$PAGE" \
+                -H "Authorization: Bearer $CF_API_TOKEN" \
+                -H "Content-Type: application/json")
+
+            # Extract and print rules from current page
+            RULES=$(echo "$RESPONSE" | jq -r '.result[] | "[\(.id)] \(.configuration.value) - \(.notes) (Created: \(.created_on))"')
+
+            if [[ -z "$RULES" ]]; then break; fi
+
+            echo "$RULES"
+
+            # Count for summary
+            PAGE_COUNT=$(echo "$RESPONSE" | jq '.result | length')
+            TOTAL_COUNT=$((TOTAL_COUNT + PAGE_COUNT))
+
+            # Check if there is another page
+            TOTAL_PAGES=$(echo "$RESPONSE" | jq -r '.result_info.total_pages')
+            if [[ "$PAGE" -ge "$TOTAL_PAGES" ]]; then break; fi
+            ((PAGE++))
+        done
+        echo "------------------------------------------------"
+        echo "Total IPs found: $TOTAL_COUNT"
         ;;
 
     info)
