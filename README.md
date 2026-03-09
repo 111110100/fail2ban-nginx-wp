@@ -83,17 +83,37 @@ To list blocked IPs on Cloudflare:
 cf-manage.sh list
 ```
 
-#### MANUALLY BLOCK AN IP
+#### BLOCK AN IP
 To manually block an IP
 ```bash
-cf-manage ban <IP>
+cf-manage.sh ban <IP>
 ```
 
-#### MANUALLY UNBLOCK AN IP
+#### UNBLOCK AN IP
 To manually unblock an IP
 ```bash
-cf-manage unban <IP>
+cf-manage.sh unban <IP>
 ```
+
+#### SHOW INFO ON IP
+To show information about a blocked IP (Dae of block, country, network)
+```bash
+cf-manage.sh info <IP>
+```
+
+#### AUTO-DELETE IP
+The script can automatically delete IPs that were banned after a certain amount of days has passed
+```bash
+cf-manage.sh clean <DAYS>
+```
+
+#### SCHEDULE AUTO-DELETE IPS
+You can also schedule them using a cron:
+```bash
+crontab -e
+0 0 * * * /path/to/cf-manage.sh clean 7 >> /var/log/cf-clean.log 2>&1
+```
+will delete banned IPs from Cloudflare if they're older than 7 days
 
 ## IMPORTANT NOTES
 - **REAL IP**: Ensure Nginx domain configs include `include snippets/security-traps.conf;`.
