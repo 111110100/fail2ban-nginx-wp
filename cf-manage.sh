@@ -61,7 +61,7 @@ case "$1" in
         if [[ -z "$2" ]]; then usage; fi
         IP="$2"
         echo "------------------------------------------------"
-        echo " LOGOUT & GEO LOOKUP FOR: $IP"
+        echo " INFO & GEO LOOKUP FOR: $IP"
         echo "------------------------------------------------"
 
         # 1. Cloudflare Status Check
