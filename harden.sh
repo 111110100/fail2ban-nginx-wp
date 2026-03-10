@@ -110,7 +110,7 @@ echo "Configuring Exploit Filters..."
 cat <<EOF > /etc/fail2ban/filter.d/nginx-exploits.conf
 [Definition]
 failregex = ^<HOST> -.*"(GET|POST|HEAD).*(union|select|insert|update|delete|drop|concat|information_schema|benchmark).*"
-            ^<HOST> -.*"(GET|POST|HEAD).*(<|%3C)script.*(>|%3E).*"
+            ^<HOST> -.*"(GET|POST|HEAD).*(<|%%3C)script.*(>|%%3E).*"
             ^<HOST> -.*"(GET|POST|HEAD).*(onload|onerror|alert|document\.cookie).*"
             ^<HOST> -.*"(GET|POST|HEAD).*\.\./\.\./.*"
 EOF
