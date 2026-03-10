@@ -76,29 +76,43 @@ EOF
 
 # 6. Create Filters
 echo "Creating Fail2Ban filters..."
+echo "Configuring Probing Filters..."
 cat > /etc/fail2ban/filter.d/nginx-403.conf <<'EOF'
 [Definition]
 failregex = ^<HOST> -.*"(GET|POST|HEAD).*" 403
 EOF
 
+echo "Configuring Honeypot Filters..."
 cat > /etc/fail2ban/filter.d/nginx-honeypot.conf <<'EOF'
 [Definition]
 failregex = ^<HOST> -.*"(GET|POST|HEAD).*" 403
 EOF
 
+echo "Configuring Scanner Filters..."
 cat > /etc/fail2ban/filter.d/nginx-scanner.conf <<'EOF'
 [Definition]
 failregex = ^<HOST> .* "(GET|POST|HEAD).*(\.env|\.git/config|phpinfo\.php|\.aws|\.DS_Store|vendor/phpunit|composer\.json)
 EOF
 
+echo "Configuring Sensetive Files Filters..."
 cat > /etc/fail2ban/filter.d/nginx-sensitive-files.conf <<'EOF'
 [Definition]
 failregex = ^<HOST> .* "(GET|POST|HEAD).*\\.(env|git|aws|DS_Store|bak|sql)
 EOF
 
+echo "Configuring AI Scrapper Filters..."
 cat > /etc/fail2ban/filter.d/nginx-ai-scrapers.conf <<'EOF'
 [Definition]
 failregex = ^<HOST> .* "(GET|POST|HEAD).*" .*"(GPTBot|ChatGPT|ClaudeBot|Amazonbot|CCBot|anthropic-ai)"
+EOF
+
+echo "Configuring Exploit Filters..."
+cat <<EOF > /etc/fail2ban/filter.d/nginx-exploits.conf
+[Definition]
+failregex = ^<HOST> -.*"(GET|POST|HEAD).*(union|select|insert|update|delete|drop|concat|information_schema|benchmark).*"
+            ^<HOST> -.*"(GET|POST|HEAD).*(<|%3C)script.*(>|%3E).*"
+            ^<HOST> -.*"(GET|POST|HEAD).*(onload|onerror|alert|document\.cookie).*"
+            ^<HOST> -.*"(GET|POST|HEAD).*\.\./\.\./.*"
 EOF
 
 # 7. Global Jail Configuration
@@ -109,6 +123,8 @@ IGNORE_LIST=$(echo "$CF_IPV4 $CF_IPV6" | tr '\n' ' ')
 
 cat > /etc/fail2ban/jail.local <<EOF
 [DEFAULT]
+cf_token = $CF_API_TOKEN
+cf_account = $CF_ACCOUNT_ID
 ignoreip = 127.0.0.1/8 ::1 $MY_IP $IGNORE_LIST
 bantime = 3600
 findtime = 600
@@ -157,6 +173,15 @@ logpath = /var/log/fail2ban.log
 bantime = 604800
 findtime = 86400
 maxretry = 5
+
+[nginx-exploits]
+enabled = true
+port = http,https
+filter = nginx-exploits
+logpath = /var/log/nginx/*access.log
+maxretry = 2
+findtime = 3600
+bantime = 86400
 EOF
 
 # 8. UFW Whitelisting
