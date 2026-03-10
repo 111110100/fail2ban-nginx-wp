@@ -97,7 +97,7 @@ EOF
 echo "Configuring Sensetive Files Filters..."
 cat > /etc/fail2ban/filter.d/nginx-sensitive-files.conf <<'EOF'
 [Definition]
-failregex = ^<HOST> .* "(GET|POST|HEAD).*\\.(env|git|aws|DS_Store|bak|sql)
+failregex = ^<HOST> -.*"(GET|POST|HEAD) /.*\.(env|git|aws|bak|sql|phpinfo|htaccess).* HTTP/.*" (404|403|401) .*
 EOF
 
 echo "Configuring AI Scrapper Filters..."
@@ -194,3 +194,21 @@ ufw --force enable
 
 systemctl restart fail2ban
 echo "Done."
+
+# 9. Final Validation
+echo ""
+echo "------------------------------------------------"
+echo "🏁 INSTALLATION COMPLETE"
+echo "------------------------------------------------"
+echo "Running automated sanity check on filters..."
+
+# Make sure the check script is executable
+chmod +x ./harden-check.sh
+
+# Run the check
+./harden-check.sh
+
+echo ""
+echo "Verify your active bans with: ./cf-manage.sh list"
+echo "Test your edge defense with: ./fail2ban-cf-test.sh <URL> all"
+echo "------------------------------------------------"
