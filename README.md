@@ -53,7 +53,7 @@ systemctl restart ufw && systemctl stop fail2ban && rm -f /var/lib/fail2ban/fail
 ```
 
 ### CF-MANAGE SCRIPT
-This repo provides a script that allows your to list, manually ban and unban IPs blocked by Fail2Ban.
+This repo provides a script that allows you to list, manually ban and unban IPs blocked by Fail2Ban.
 
 #### GET YOUR ACCOUNT ID FROM CLOUDFLARE
 - Login to your Cloudflare Dashboard

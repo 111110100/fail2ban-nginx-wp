@@ -146,7 +146,7 @@ logpath = /var/log/nginx/honeypot.log
 maxretry = 1
 bantime = 86400
 
-[nginx-scanners]
+[nginx-scanner]
 enabled = true
 filter = nginx-scanner
 logpath = /var/log/nginx/*access.log
@@ -203,10 +203,10 @@ echo "------------------------------------------------"
 echo "Running automated sanity check on filters..."
 
 # Make sure the check script is executable
-chmod +x ./harden-check.sh
+chmod +x ./fail2ban-test.sh
 
 # Run the check
-./harden-check.sh
+./fail2ban-test.sh
 
 echo ""
 echo "Verify your active bans with: ./cf-manage.sh list"
