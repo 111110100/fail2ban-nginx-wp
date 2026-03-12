@@ -79,40 +79,40 @@ echo "Creating Fail2Ban filters..."
 echo "Configuring Probing Filters..."
 cat > /etc/fail2ban/filter.d/nginx-403.conf <<'EOF'
 [Definition]
-failregex = ^<HOST> -.*"(GET|POST|HEAD).*" 403
+failregex = ^<HOST> -.*"(GET|POST|HEAD) /.* HTTP/.*" 403
 EOF
 
 echo "Configuring Honeypot Filters..."
 cat > /etc/fail2ban/filter.d/nginx-honeypot.conf <<'EOF'
 [Definition]
-failregex = ^<HOST> -.*"(GET|POST|HEAD).*" 403
+failregex = ^<HOST> -.*"(GET|POST|HEAD) /.* HTTP/.*" 403
 EOF
 
 echo "Configuring Scanner Filters..."
 cat > /etc/fail2ban/filter.d/nginx-scanner.conf <<'EOF'
 [Definition]
-failregex = ^<HOST> .* "(GET|POST|HEAD).*(\.env|\.git/config|phpinfo\.php|\.aws|\.DS_Store|vendor/phpunit|composer\.json)
+failregex = ^<HOST> -.*"(GET|POST|HEAD) /.*(\.env|\.git|\.aws|\.DS_Store|phpinfo\.php|composer\.json|vendor/phpunit|wp-admin/install\.php) HTTP/.*" (403|404)
 EOF
 
-echo "Configuring Sensetive Files Filters..."
+echo "Configuring Sensitive Files Filters..."
 cat > /etc/fail2ban/filter.d/nginx-sensitive-files.conf <<'EOF'
 [Definition]
-failregex = ^<HOST> -.*"(GET|POST|HEAD) /.*\.(env|git|aws|bak|sql|phpinfo|htaccess).* HTTP/.*" (404|403|401) .*
+failregex = ^<HOST> -.*"(GET|POST|HEAD) /.*\.(env|git|aws|bak|sql|phpinfo|htaccess|config|log|backup|old|swp) HTTP/.*" (404|403|401)
 EOF
 
-echo "Configuring AI Scrapper Filters..."
+echo "Configuring AI Scraper Filters..."
 cat > /etc/fail2ban/filter.d/nginx-ai-scrapers.conf <<'EOF'
 [Definition]
-failregex = ^<HOST> .* "(GET|POST|HEAD).*" .*"(GPTBot|ChatGPT|ClaudeBot|Amazonbot|CCBot|anthropic-ai)"
+failregex = ^<HOST> -.*"(GET|POST|HEAD) /.* HTTP/.*" .*"(GPTBot|ChatGPT|ClaudeBot|Amazonbot|CCBot|anthropic-ai|Bytespider|ImagesiftBot)"
 EOF
 
 echo "Configuring Exploit Filters..."
-cat <<EOF > /etc/fail2ban/filter.d/nginx-exploits.conf
+cat <<'EOF' > /etc/fail2ban/filter.d/nginx-exploits.conf
 [Definition]
-failregex = ^<HOST> -.*"(GET|POST|HEAD).*(union|select|insert|update|delete|drop|concat|information_schema|benchmark).*"
-            ^<HOST> -.*"(GET|POST|HEAD).*(<|%%3C)script.*(>|%%3E).*"
-            ^<HOST> -.*"(GET|POST|HEAD).*(onload|onerror|alert|document\.cookie).*"
-            ^<HOST> -.*"(GET|POST|HEAD).*\.\./\.\./.*"
+failregex = ^<HOST> -.*"(GET|POST|HEAD) .*\b(union|select|insert|update|delete|drop|concat|information_schema|benchmark)\b.*"
+            ^<HOST> -.*"(GET|POST|HEAD) .*(\<|%%3C)script.*(\>|%%3E).*"
+            ^<HOST> -.*"(GET|POST|HEAD) .*(onload|onerror|alert|document\.cookie).*"
+            ^<HOST> -.*"(GET|POST|HEAD) .*\.\.\/\.\.\/.*"
 EOF
 
 # 7. Global Jail Configuration
