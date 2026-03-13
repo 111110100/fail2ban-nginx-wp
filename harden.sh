@@ -67,11 +67,11 @@ cftoken =
 cfaccount = 
 EOF
 
-# 5. Configure UFW Action
+# 5. Configure UFW Action (Fixed for IPv6 and Empty Rulesets)
 cat > /etc/fail2ban/action.d/ufw.conf <<'EOF'
 [Definition]
-actionban = /usr/sbin/ufw insert 1 deny from <ip> to any
-actionunban = /usr/sbin/ufw delete deny from <ip> to any
+actionban = /usr/sbin/ufw insert 1 deny from <ip>
+actionunban = /usr/sbin/ufw delete deny from <ip>
 EOF
 
 # 6. Create Filters
@@ -201,11 +201,24 @@ EOF
 
 # 8. UFW Whitelisting
 echo "Applying UFW whitelists..."
+# Ensure IPv6 is enabled in UFW
+sed -i 's/IPV6=no/IPV6=yes/g' /etc/default/ufw 2>/dev/null || true
+
+# Fetch Cloudflare IPs with fallbacks
+CF_IPV4=$(curl -s https://www.cloudflare.com/ips-v4 || echo "173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22")
+CF_IPV6=$(curl -s https://www.cloudflare.com/ips-v6 || echo "2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32")
+
+# Basic system rules
 ufw allow ssh
+
+# Add Cloudflare Allow Rules (Ensures ruleset isn't empty)
 for ip in $CF_IPV4 $CF_IPV6; do
     ufw allow from "$ip" to any port 80,443 proto tcp comment 'Cloudflare IP'
 done
-ufw --force enable
+
+# Force enable UFW
+echo "y" | ufw enable
+ufw reload
 
 systemctl restart fail2ban
 echo "Done."
