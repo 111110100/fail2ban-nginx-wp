@@ -106,6 +106,12 @@ cat > /etc/fail2ban/filter.d/nginx-ai-scrapers.conf <<'EOF'
 failregex = ^<HOST> -.*"(GET|POST|HEAD) /.* HTTP/.*" .*"(GPTBot|ChatGPT|ClaudeBot|Amazonbot|CCBot|anthropic-ai|Bytespider|ImagesiftBot)"
 EOF
 
+echo "Configuring WordPress Login Filters..."
+cat > /etc/fail2ban/filter.d/nginx-wp-login.conf <<'EOF'
+[Definition]
+failregex = ^<HOST> -.*"POST /wp-login\.php HTTP/.*" 200
+EOF
+
 echo "Configuring Exploit Filters..."
 cat <<'EOF' > /etc/fail2ban/filter.d/nginx-exploits.conf
 [Definition]
@@ -165,6 +171,15 @@ enabled = true
 filter = nginx-ai-scrapers
 logpath = /var/log/nginx/*access.log
 maxretry = 2
+bantime = 86400
+
+[nginx-wp-login]
+enabled = true
+port = http,https
+filter = nginx-wp-login
+logpath = /var/log/nginx/*access.log
+maxretry = 3
+findtime = 3600
 bantime = 86400
 
 [recidive]

@@ -53,10 +53,13 @@ check_filter "nginx-scanner" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /wp-
 check_filter "nginx-sensitive-files" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /.env HTTP/1.1" 404 150'
 check_filter "nginx-sensitive-files" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /backup.sql HTTP/1.1" 403 150'
 
-# 5. AI Scrapers
+# 5. WordPress Login
+check_filter "nginx-wp-login" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "POST /wp-login.php HTTP/1.1" 200 150'
+
+# 6. AI Scrapers
 check_filter "nginx-ai-scrapers" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /blog-post HTTP/1.1" 200 150 "-" "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)"'
 
-# 6. Nginx Exploits
+# 7. Nginx Exploits
 check_filter "nginx-exploits" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /?id=1+union+select+1 HTTP/1.1" 200 150'
 check_filter "nginx-exploits" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /<script>alert(1)</script> HTTP/1.1" 200 150'
 check_filter "nginx-exploits" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /index.php?file=../../etc/passwd HTTP/1.1" 200 150'
