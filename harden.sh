@@ -133,6 +133,13 @@ cat > /etc/fail2ban/filter.d/nginx-php-probes.conf <<'EOF'
 failregex = ^<HOST> -.*"(GET|POST|HEAD) /.*\.(php|phtml|php3|php4|php5|phps) HTTP/.*" 404
 EOF
 
+echo "Configuring XML-RPC Filters..."
+cat > /etc/fail2ban/filter.d/nginx-xmlrpc.conf <<'EOF'
+[Definition]
+# Target XML-RPC flooding (even with double slashes)
+failregex = ^<HOST> -.*"POST /+xmlrpc\.php HTTP/.*" 200
+EOF
+
 echo "Configuring Exploit Filters..."
 cat <<'EOF' > /etc/fail2ban/filter.d/nginx-exploits.conf
 [Definition]
@@ -221,6 +228,15 @@ port = http,https
 filter = nginx-php-probes
 logpath = /var/log/nginx/*access.log
 maxretry = 2
+findtime = 600
+bantime = 86400
+
+[nginx-xmlrpc]
+enabled = true
+port = http,https
+filter = nginx-xmlrpc
+logpath = /var/log/nginx/*access.log
+maxretry = 3
 findtime = 600
 bantime = 86400
 

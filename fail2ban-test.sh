@@ -65,6 +65,10 @@ check_filter "nginx-wp-cron" '209.38.89.160 - - [04/Apr/2026:01:44:33 +0000] "PO
 check_filter "nginx-php-probes" '13.75.213.214 - - [04/Apr/2026:06:20:25 +0000] "GET /edit.php HTTP/1.1" 404 196'
 check_filter "nginx-php-probes" '13.75.213.214 - - [04/Apr/2026:06:20:31 +0000] "GET /wp-content/uploads/admin.php HTTP/1.1" 404 196'
 
+# 5d. XML-RPC Flooding
+check_filter "nginx-xmlrpc" '45.67.221.84 - - [04/Apr/2026:20:46:10 +0000] "POST //xmlrpc.php HTTP/1.1" 200 466'
+check_filter "nginx-xmlrpc" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "POST /xmlrpc.php HTTP/1.1" 200 150'
+
 # 6. AI Scrapers
 check_filter "nginx-ai-scrapers" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /blog-post HTTP/1.1" 200 150 "-" "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)"'
 

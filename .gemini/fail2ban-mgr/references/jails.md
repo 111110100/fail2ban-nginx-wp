@@ -10,6 +10,7 @@
 | `nginx-wp-login` | 3 | 3600s | 86400s | UFW + Cloudflare |
 | `nginx-wp-cron` | 5 | 600s | 86400s | UFW + CF + Custom Log |
 | `nginx-php-probes` | 2 | 600s | 86400s | UFW + Cloudflare |
+| `nginx-xmlrpc` | 3 | 600s | 86400s | UFW + Cloudflare |
 | `nginx-exploits` | 2 | 3600s | 86400s | UFW + Cloudflare |
 | `recidive` | 5 | 86400s | 604800s | UFW + Cloudflare |
 
