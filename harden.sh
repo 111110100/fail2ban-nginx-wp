@@ -67,6 +67,13 @@ cftoken =
 cfaccount = 
 EOF
 
+# 4b. Configure WP-Cron Action
+cat > /etc/fail2ban/action.d/nginx-wp-cron-action.conf <<'EOF'
+[Definition]
+actionban = echo "[$(date)] <jailname> BAN: <ip> (Abusing wp-cron.php)" >> /var/log/fail2ban-wp-cron.log
+actionunban = echo "[$(date)] <jailname> UNBAN: <ip>" >> /var/log/fail2ban-wp-cron.log
+EOF
+
 # 5. Configure UFW Action (Fixed for IPv6 and Empty Rulesets)
 cat > /etc/fail2ban/action.d/ufw.conf <<'EOF'
 [Definition]
@@ -112,6 +119,13 @@ cat > /etc/fail2ban/filter.d/nginx-wp-login.conf <<'EOF'
 failregex = ^<HOST> -.*"POST /wp-login\.php HTTP/.*" 200
 EOF
 
+echo "Configuring WordPress WP-Cron Filters..."
+cat > /etc/fail2ban/filter.d/nginx-wp-cron.conf <<'EOF'
+[Definition]
+# Target wp-cron calls, especially those resulting in timeouts (504) or high frequency
+failregex = ^<HOST> -.*"(GET|POST) /wp-cron\.php(?:\?.*)? HTTP/.*" (?:504|200|499)
+EOF
+
 echo "Configuring Exploit Filters..."
 cat <<'EOF' > /etc/fail2ban/filter.d/nginx-exploits.conf
 [Definition]
@@ -135,8 +149,8 @@ ignoreip = 127.0.0.1/8 ::1 $MY_IP $IGNORE_LIST
 bantime = 3600
 findtime = 600
 maxretry = 5
-banaction = ufw
-            cloudflare[cftoken="$CF_API_TOKEN", cfaccount="$CF_ACCOUNT_ID"]
+action = ufw
+         cloudflare[cftoken="$CF_API_TOKEN", cfaccount="$CF_ACCOUNT_ID"]
 
 [nginx-403]
 enabled = true
@@ -181,6 +195,18 @@ logpath = /var/log/nginx/*access.log
 maxretry = 3
 findtime = 3600
 bantime = 86400
+
+[nginx-wp-cron]
+enabled = true
+port = http,https
+filter = nginx-wp-cron
+logpath = /var/log/nginx/*access.log
+maxretry = 5
+findtime = 600
+bantime = 86400
+action = ufw
+         cloudflare[cftoken="$CF_API_TOKEN", cfaccount="$CF_ACCOUNT_ID"]
+         nginx-wp-cron-action
 
 [recidive]
 enabled = true
