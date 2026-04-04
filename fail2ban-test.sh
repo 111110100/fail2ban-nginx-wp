@@ -61,6 +61,10 @@ check_filter "nginx-wp-cron" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "POST /wp
 check_filter "nginx-wp-cron" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "POST /wp-cron.php?doing_wp_cron=123.456 HTTP/1.1" 200 150'
 check_filter "nginx-wp-cron" '209.38.89.160 - - [04/Apr/2026:01:44:33 +0000] "POST /wp-cron.php?doing_wp_cron=1775267013.7797780036926269531250 HTTP/1.1" 504 176 "-" "WordPress/6.7.5; https://mydigitalstylist.com.au"'
 
+# 5c. PHP Probes (Shell hunting/Backdoors)
+check_filter "nginx-php-probes" '13.75.213.214 - - [04/Apr/2026:06:20:25 +0000] "GET /edit.php HTTP/1.1" 404 196'
+check_filter "nginx-php-probes" '13.75.213.214 - - [04/Apr/2026:06:20:31 +0000] "GET /wp-content/uploads/admin.php HTTP/1.1" 404 196'
+
 # 6. AI Scrapers
 check_filter "nginx-ai-scrapers" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /blog-post HTTP/1.1" 200 150 "-" "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)"'
 
