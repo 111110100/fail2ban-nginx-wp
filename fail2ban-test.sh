@@ -56,6 +56,11 @@ check_filter "nginx-sensitive-files" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "
 # 5. WordPress Login
 check_filter "nginx-wp-login" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "POST /wp-login.php HTTP/1.1" 200 150'
 
+# 5b. WordPress WP-Cron
+check_filter "nginx-wp-cron" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "POST /wp-cron.php HTTP/1.1" 200 150'
+check_filter "nginx-wp-cron" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "POST /wp-cron.php?doing_wp_cron=123.456 HTTP/1.1" 200 150'
+check_filter "nginx-wp-cron" '209.38.89.160 - - [04/Apr/2026:01:44:33 +0000] "POST /wp-cron.php?doing_wp_cron=1775267013.7797780036926269531250 HTTP/1.1" 504 176 "-" "WordPress/6.7.5; https://mydigitalstylist.com.au"'
+
 # 6. AI Scrapers
 check_filter "nginx-ai-scrapers" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /blog-post HTTP/1.1" 200 150 "-" "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)"'
 
