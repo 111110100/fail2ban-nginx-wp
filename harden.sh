@@ -126,6 +126,13 @@ cat > /etc/fail2ban/filter.d/nginx-wp-cron.conf <<'EOF'
 failregex = ^<HOST> -.*"(GET|POST) /wp-cron\.php(?:\?.*)? HTTP/.*" (?:504|200|499)
 EOF
 
+echo "Configuring PHP Probe Filters..."
+cat > /etc/fail2ban/filter.d/nginx-php-probes.conf <<'EOF'
+[Definition]
+# Target random PHP files, shells, and admin tools that shouldn't exist
+failregex = ^<HOST> -.*"(GET|POST|HEAD) /.*\.(php|phtml|php3|php4|php5|phps) HTTP/.*" 404
+EOF
+
 echo "Configuring Exploit Filters..."
 cat <<'EOF' > /etc/fail2ban/filter.d/nginx-exploits.conf
 [Definition]
@@ -207,6 +214,15 @@ bantime = 86400
 action = ufw
          cloudflare[cftoken="$CF_API_TOKEN", cfaccount="$CF_ACCOUNT_ID"]
          nginx-wp-cron-action
+
+[nginx-php-probes]
+enabled = true
+port = http,https
+filter = nginx-php-probes
+logpath = /var/log/nginx/*access.log
+maxretry = 2
+findtime = 600
+bantime = 86400
 
 [recidive]
 enabled = true
