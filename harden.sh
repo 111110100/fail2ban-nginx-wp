@@ -116,7 +116,9 @@ EOF
 echo "Configuring WordPress Login Filters..."
 cat > /etc/fail2ban/filter.d/nginx-wp-login.conf <<'EOF'
 [Definition]
+# Match POST logins (200) and repeated GET admin attempts (302)
 failregex = ^<HOST> -.*"POST /wp-login\.php HTTP/.*" 200
+            ^<HOST> -.*"GET /wp-admin/index\.php HTTP/.*" 302
 EOF
 
 echo "Configuring WordPress WP-Cron Filters..."
@@ -170,7 +172,7 @@ action = ufw
 enabled = true
 port = http,https
 filter = nginx-403
-logpath = /var/log/nginx/*access.log
+logpath = /var/log/nginx/*access*log
 maxretry = 10
 
 [nginx-honeypot]
@@ -183,21 +185,21 @@ bantime = 86400
 [nginx-scanner]
 enabled = true
 filter = nginx-scanner
-logpath = /var/log/nginx/*access.log
+logpath = /var/log/nginx/*access*log
 maxretry = 1
 bantime = 86400
 
 [nginx-sensitive-files]
 enabled = true
 filter = nginx-sensitive-files
-logpath = /var/log/nginx/*access.log
+logpath = /var/log/nginx/*access*log
 maxretry = 1
 bantime = 86400
 
 [nginx-ai-scrapers]
 enabled = true
 filter = nginx-ai-scrapers
-logpath = /var/log/nginx/*access.log
+logpath = /var/log/nginx/*access*log
 maxretry = 2
 bantime = 86400
 
@@ -205,7 +207,7 @@ bantime = 86400
 enabled = true
 port = http,https
 filter = nginx-wp-login
-logpath = /var/log/nginx/*access.log
+logpath = /var/log/nginx/*access*log
 maxretry = 3
 findtime = 3600
 bantime = 86400
@@ -214,7 +216,7 @@ bantime = 86400
 enabled = true
 port = http,https
 filter = nginx-wp-cron
-logpath = /var/log/nginx/*access.log
+logpath = /var/log/nginx/*access*log
 maxretry = 5
 findtime = 600
 bantime = 86400
@@ -226,7 +228,7 @@ action = ufw
 enabled = true
 port = http,https
 filter = nginx-php-probes
-logpath = /var/log/nginx/*access.log
+logpath = /var/log/nginx/*access*log
 maxretry = 2
 findtime = 600
 bantime = 86400
@@ -235,7 +237,7 @@ bantime = 86400
 enabled = true
 port = http,https
 filter = nginx-xmlrpc
-logpath = /var/log/nginx/*access.log
+logpath = /var/log/nginx/*access*log
 maxretry = 3
 findtime = 600
 bantime = 86400
@@ -251,7 +253,7 @@ maxretry = 5
 enabled = true
 port = http,https
 filter = nginx-exploits
-logpath = /var/log/nginx/*access.log
+logpath = /var/log/nginx/*access*log
 maxretry = 2
 findtime = 3600
 bantime = 86400
