@@ -256,6 +256,8 @@ logpath = /var/log/fail2ban.log
 bantime = 604800
 findtime = 86400
 maxretry = 5
+action = ufw[name=%(__name__)s, port="%(port)s", protocol="%(protocol)s", chain="%(chain)s"]
+         cloudflare[cftoken="$CF_API_TOKEN", cfaccount="$CF_ACCOUNT_ID"]
 
 [nginx-exploits]
 enabled = true
