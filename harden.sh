@@ -142,6 +142,12 @@ cat > /etc/fail2ban/filter.d/nginx-xmlrpc.conf <<'EOF'
 failregex = ^<HOST> -.*"POST /+xmlrpc\.php HTTP/.*" 200
 EOF
 
+echo "Configuring Recidive Filter..."
+cat > /etc/fail2ban/filter.d/recidive.conf <<'EOF'
+[Definition]
+failregex = ^\[<jailname>\] (?:Ban|Already banned) <HOST>$
+EOF
+
 echo "Configuring Exploit Filters..."
 cat <<'EOF' > /etc/fail2ban/filter.d/nginx-exploits.conf
 [Definition]
@@ -165,8 +171,10 @@ ignoreip = 127.0.0.1/8 ::1 $MY_IP $IGNORE_LIST
 bantime = 3600
 findtime = 600
 maxretry = 5
-action = ufw
-         cloudflare[cftoken="$CF_API_TOKEN", cfaccount="$CF_ACCOUNT_ID"]
+# Robust action definition using Fail2Ban interpolation
+banaction = ufw
+            cloudflare[cftoken="$CF_API_TOKEN", cfaccount="$CF_ACCOUNT_ID"]
+action = %(action_mw)s
 
 [nginx-403]
 enabled = true
@@ -220,8 +228,7 @@ logpath = /var/log/nginx/*access*log
 maxretry = 5
 findtime = 600
 bantime = 86400
-action = ufw
-         cloudflare[cftoken="$CF_API_TOKEN", cfaccount="$CF_ACCOUNT_ID"]
+action = %(action_mw)s
          nginx-wp-cron-action
 
 [nginx-php-probes]
@@ -244,6 +251,7 @@ bantime = 86400
 
 [recidive]
 enabled = true
+filter = recidive
 logpath = /var/log/fail2ban.log
 bantime = 604800
 findtime = 86400
