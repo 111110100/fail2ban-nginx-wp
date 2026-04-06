@@ -13,6 +13,7 @@
 | `nginx-php-probes` | 2 | 600s | 86400s | UFW + Cloudflare |
 | `nginx-xmlrpc` | 3 | 600s | 86400s | UFW + Cloudflare |
 | `nginx-exploits` | 2 | 3600s | 86400s | UFW + Cloudflare |
+| `nginx-dir-list` | 2 | 600s | 86400s | UFW + Cloudflare |
 | `recidive` | 5 | 86400s | 604800s | UFW + Cloudflare |
 
 ## Threshold Logic

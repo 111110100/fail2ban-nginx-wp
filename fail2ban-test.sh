@@ -86,5 +86,10 @@ check_filter "nginx-exploits" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /in
 check_filter "nginx-wp-rest" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /wp-json/wp/v2/users HTTP/1.1" 200 150'
 check_filter "nginx-wp-rest" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /wp-json/yoast HTTP/1.1" 200 150'
 
+# 7c. Directory Listing (nginx error log)
+check_filter "nginx-dir-list" '2026/04/06 04:44:07 [error] 500316#500316: *154232 directory index of "/var/www/bymilla.au/wp-includes/Text/Diff/Engine/" is forbidden, client: 52.187.249.150, server: bymilla.au, request: "GET /wp-includes/Text/Diff/Engine/ HTTP/1.1", host: "bymilla.au"'
+check_filter "nginx-dir-list" '2026/04/06 04:44:10 [error] 500316#500316: *154232 directory index of "/var/www/bymilla.au/wp-includes/" is forbidden, client: 52.187.249.150, server: bymilla.au, request: "GET /wp-includes/ HTTP/1.1", host: "bymilla.au"'
+check_filter "nginx-dir-list" '2026/04/06 04:44:12 [error] 500316#500316: *154232 directory index of "/var/www/bymilla.au/wp-admin/css/colors/" is forbidden, client: 52.187.249.150, server: bymilla.au, request: "GET /wp-admin/css/colors/ HTTP/1.1", host: "bymilla.au"'
+
 echo "------------------------------------------------"
 echo "Check complete."

@@ -34,3 +34,4 @@ All notable changes to this project will be documented in this file.
 | Jail Name | Max Retry | Find Time | Ban Time | Purpose |
 |-----------|-----------|-----------|----------|---------|
 | `nginx-wp-rest` | 3 | 600s | 86400s | WordPress REST API user enumeration |
+| `nginx-dir-list` | 2 | 600s | 86400s | Directory index enumeration (nginx error log) |

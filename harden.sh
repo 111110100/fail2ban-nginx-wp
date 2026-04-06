@@ -180,6 +180,15 @@ failregex = ^<HOST> -.*"(GET|POST) /wp-json/wp/v2/users HTTP/.*" 200
 ignoreregex =
 EOF
 
+echo "Configuring Directory Listing Filters..."
+cat > /etc/fail2ban/filter.d/nginx-dir-list.conf <<'EOF'
+[Definition]
+# Catch directory index forbidden errors from nginx error log
+# Matches: "directory index of "/path/" is forbidden, client: <HOST>"
+failregex = ^.*directory index of ".*" is forbidden, client: <HOST>,.*$
+ignoreregex =
+EOF
+
 # 6b. Create Nginx Snippets
 echo "Creating Nginx snippets..."
 
@@ -396,6 +405,14 @@ port = http,https
 filter = nginx-wp-rest
 logpath = /var/log/nginx/*access*log
 maxretry = 3
+findtime = 600
+bantime = 86400
+
+[nginx-dir-list]
+enabled = true
+filter = nginx-dir-list
+logpath = /var/log/nginx/*error*log
+maxretry = 2
 findtime = 600
 bantime = 86400
 EOF
