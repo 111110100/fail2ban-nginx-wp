@@ -1,12 +1,19 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
-# --- CONFIGURATION (FILL THESE IN) ---
-CF_ACCOUNT_ID=""
-CF_API_TOKEN=""
-MY_IP="" # Your home IP to prevent self-lockout
-# -------------------------------------
+# --- CONFIGURATION ---
+# Load from .env file if it exists, otherwise use defaults
+ENV_FILE="$(dirname "$0")/.env"
+if [[ -f "$ENV_FILE" ]]; then
+    # shellcheck source=.env
+    source "$ENV_FILE"
+fi
+
+CF_ACCOUNT_ID="${CF_ACCOUNT_ID:-}"
+CF_API_TOKEN="${CF_API_TOKEN:-}"
+MY_IP="${MY_IP:-}"
+# ---------------------
 
 echo "===================================="
 echo " MASTER NGINX + CF SECURITY SETUP "
@@ -92,7 +99,9 @@ EOF
 echo "Configuring Honeypot Filters..."
 cat > /etc/fail2ban/filter.d/nginx-honeypot.conf <<'EOF'
 [Definition]
-failregex = ^<HOST> -.*"(GET|POST|HEAD) /.* HTTP/.*" 403
+# Only match honeypot-specific paths that real users should never access
+failregex = ^<HOST> -.*"(GET|POST|HEAD) /(\.env|\.git|wp-admin/install\.php|phpinfo\.php|vendor/phpunit|composer\.json) HTTP/.*" 403
+ignoreregex =
 EOF
 
 echo "Configuring Scanner Filters..."
@@ -145,20 +154,35 @@ EOF
 echo "Configuring Recidive Filter..."
 cat > /etc/fail2ban/filter.d/recidive.conf <<'EOF'
 [Definition]
-failregex = ^\[<jailname>\] (?:Ban|Already banned) <HOST>$
+# Match ban notices from all jails except recidive itself (prevents recursion)
+failregex = ^\s*(?:\S+ )?(?:fail2ban\.actions\s*:?\s*)?NOTICE\s+\[(?!recidive\]).+\]\s+Ban\s+<HOST>\s*$
+ignoreregex =
 EOF
 
 echo "Configuring Exploit Filters..."
 cat <<'EOF' > /etc/fail2ban/filter.d/nginx-exploits.conf
 [Definition]
-failregex = ^<HOST> -.*"(GET|POST|HEAD) .*\b(union|select|insert|update|delete|drop|concat|information_schema|benchmark)\b.*"
-            ^<HOST> -.*"(GET|POST|HEAD) .*(\<|%%3C)script.*(\>|%%3E).*"
-            ^<HOST> -.*"(GET|POST|HEAD) .*(onload|onerror|alert|document\.cookie).*"
-            ^<HOST> -.*"(GET|POST|HEAD) .*\.\.\/\.\.\/.*"
+# Target SQL injection attempts in query strings only (avoids false positives on legitimate content)
+failregex = ^<HOST> -.*"(GET|POST|HEAD) /[^\"]*\?.*(union\s+(all\s+)?select|select\s+.*\bfrom\b|information_schema|benchmark\s*\(|load_file\s*\()
+            # Target XSS attempts
+            ^<HOST> -.*"(GET|POST|HEAD) [^\"]*(%3C|<)script[^\"]*(%3E|>).*"
+            # Target path traversal
+            ^<HOST> -.*"(GET|POST|HEAD) [^\"]*\.\./\.\./.*"
+ignoreregex =
+EOF
+
+echo "Configuring WordPress REST API Filters..."
+cat > /etc/fail2ban/filter.d/nginx-wp-rest.conf <<'EOF'
+[Definition]
+# Target user enumeration and REST API abuse
+failregex = ^<HOST> -.*"(GET|POST) /wp-json/wp/v2/users HTTP/.*" 200
+            ^<HOST> -.*"(GET|POST) /wp-json/yoast HTTP/.*" 200
+ignoreregex =
 EOF
 
 # 7. Global Jail Configuration
 echo "Configuring jail.local..."
+# Fetch Cloudflare IPs once for ignore list
 CF_IPV4=$(curl -s https://www.cloudflare.com/ips-v4)
 CF_IPV6=$(curl -s https://www.cloudflare.com/ips-v6)
 IGNORE_LIST=$(echo "$CF_IPV4 $CF_IPV6" | tr '\n' ' ')
@@ -267,6 +291,15 @@ logpath = /var/log/nginx/*access*log
 maxretry = 2
 findtime = 3600
 bantime = 86400
+
+[nginx-wp-rest]
+enabled = true
+port = http,https
+filter = nginx-wp-rest
+logpath = /var/log/nginx/*access*log
+maxretry = 3
+findtime = 600
+bantime = 86400
 EOF
 
 # 8. UFW Whitelisting
@@ -274,23 +307,25 @@ echo "Applying UFW whitelists..."
 # Ensure IPv6 is enabled in UFW
 sed -i 's/IPV6=no/IPV6=yes/g' /etc/default/ufw 2>/dev/null || true
 
-# Fetch Cloudflare IPs with fallbacks
-CF_IPV4=$(curl -s https://www.cloudflare.com/ips-v4 || echo "173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22")
-CF_IPV6=$(curl -s https://www.cloudflare.com/ips-v6 || echo "2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32")
-
 # Basic system rules
-ufw allow ssh
+ufw allow ssh || { echo "ERROR: Failed to allow SSH"; exit 1; }
 
-# Add Cloudflare Allow Rules (Ensures ruleset isn't empty)
-for ip in $CF_IPV4 $CF_IPV6; do
-    ufw allow from "$ip" to any port 80,443 proto tcp comment 'Cloudflare IP'
-done
+# Add Cloudflare Allow Rules with idempotency check (prevents duplicates on re-run)
+CF_ALLOW_COUNT=$(ufw status numbered 2>/dev/null | grep -c "Cloudflare IP" || true)
+if [ "$CF_ALLOW_COUNT" -eq 0 ]; then
+    echo "Adding Cloudflare IP allow rules..."
+    for ip in $CF_IPV4 $CF_IPV6; do
+        ufw allow from "$ip" to any port 80,443 proto tcp comment 'Cloudflare IP' || echo "WARNING: Failed to add rule for $ip"
+    done
+else
+    echo "Cloudflare IP allow rules already exist ($CF_ALLOW_COUNT rules), skipping."
+fi
 
 # Force enable UFW
-echo "y" | ufw enable
-ufw reload
+echo "y" | ufw enable || { echo "ERROR: Failed to enable UFW"; exit 1; }
+ufw reload || { echo "ERROR: Failed to reload UFW"; exit 1; }
 
-systemctl restart fail2ban
+systemctl restart fail2ban || { echo "ERROR: Failed to restart Fail2Ban"; exit 1; }
 echo "Done."
 
 # 9. Final Validation
@@ -308,5 +343,5 @@ chmod +x ./fail2ban-test.sh
 
 echo ""
 echo "Verify your active bans with: ./cf-manage.sh list"
-echo "Test your edge defense with: ./fail2ban-cf-test.sh <URL> all"
+echo "Run a health check with: ./healthcheck.sh"
 echo "------------------------------------------------"
