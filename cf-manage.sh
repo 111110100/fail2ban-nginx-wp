@@ -1,8 +1,17 @@
 #!/bin/bash
 
+set -euo pipefail
+
 # --- CONFIGURATION ---
-CF_ACCOUNT_ID=""
-CF_API_TOKEN=""
+# Load from .env file if it exists, otherwise use defaults
+ENV_FILE="$(dirname "$0")/.env"
+if [[ -f "$ENV_FILE" ]]; then
+    # shellcheck source=.env
+    source "$ENV_FILE"
+fi
+
+CF_ACCOUNT_ID="${CF_ACCOUNT_ID:-}"
+CF_API_TOKEN="${CF_API_TOKEN:-}"
 # ---------------------
 
 # Dependency Check
@@ -124,8 +133,14 @@ case "$1" in
 
     clean)
         DAYS=${2:-7}
-        CUTOFF=$(date -u -d "$DAYS days ago" +"%Y-%m-%dT%H:%M:%SZ")
-        echo "Cleaning up bans older than $DAYS days (Cutoff: $CUTOFF)..."
+        # Use epoch seconds for reliable date comparison
+        CUTOFF_EPOCH=$(date -u -d "$DAYS days ago" +%s 2>/dev/null || date -u -v-"$DAYS"d +%s 2>/dev/null)
+        if [[ -z "$CUTOFF_EPOCH" ]]; then
+            echo "ERROR: Failed to calculate cutoff date. Ensure 'date' command supports -d or -v flags."
+            exit 1
+        fi
+        CUTOFF_HUMAN=$(date -u -d @"$CUTOFF_EPOCH" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u -r "$CUTOFF_EPOCH" +"%Y-%m-%dT%H:%M:%SZ")
+        echo "Cleaning up bans older than $DAYS days (Cutoff: $CUTOFF_HUMAN)..."
 
         PAGE=1
         while true; do
@@ -142,7 +157,14 @@ case "$1" in
                 R_IP=$(echo "$rule" | jq -r '.configuration.value')
                 R_NOTES=$(echo "$rule" | jq -r '.notes')
 
-                if [[ "$R_DATE" < "$CUTOFF" ]]; then
+                # Convert ISO date to epoch for proper comparison
+                R_EPOCH=$(date -u -d "${R_DATE}" +%s 2>/dev/null || echo "0")
+                if [[ "$R_EPOCH" -eq 0 ]]; then
+                    echo "[SKIP] $R_IP has invalid date format: $R_DATE"
+                    continue
+                fi
+
+                if [[ "$R_EPOCH" -lt "$CUTOFF_EPOCH" ]]; then
                     if [[ "$R_NOTES" == *"PERMANENT"* ]]; then
                         echo "[SKIP] $R_IP is marked as permanent."
                     else
