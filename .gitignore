@@ -4,6 +4,8 @@
 # AI agent skill folders
 .gemini/
 GEMINI.md
+.qwen
+QWEN.md
 
 # Logs
 *.log
