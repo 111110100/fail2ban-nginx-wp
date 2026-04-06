@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 # --- COLORS FOR OUTPUT ---
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -42,8 +44,10 @@ check_filter() {
 # 1. Nginx 403 (Forbidden Access Spikes)
 check_filter "nginx-403" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /phpmyadmin HTTP/1.1" 403 150'
 
-# 2. Nginx Honeypot
-check_filter "nginx-honeypot" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /admin-login.php HTTP/1.1" 403 150'
+# 2. Nginx Honeypot (now targets specific paths only)
+check_filter "nginx-honeypot" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /.env HTTP/1.1" 403 150'
+check_filter "nginx-honeypot" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /.git HTTP/1.1" 403 150'
+check_filter "nginx-honeypot" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /wp-admin/install.php HTTP/1.1" 403 150'
 
 # 3. Nginx Scanner
 check_filter "nginx-scanner" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /.env HTTP/1.1" 403 150'
@@ -73,10 +77,14 @@ check_filter "nginx-xmlrpc" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "POST /xml
 # 6. AI Scrapers
 check_filter "nginx-ai-scrapers" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /blog-post HTTP/1.1" 200 150 "-" "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)"'
 
-# 7. Nginx Exploits
+# 7. Nginx Exploits (now scoped to query strings only)
 check_filter "nginx-exploits" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /?id=1+union+select+1 HTTP/1.1" 200 150'
-check_filter "nginx-exploits" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /<script>alert(1)</script> HTTP/1.1" 200 150'
+check_filter "nginx-exploits" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /%3Cscript%3Ealert(1)%3C/script%3E HTTP/1.1" 200 150'
 check_filter "nginx-exploits" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /index.php?file=../../etc/passwd HTTP/1.1" 200 150'
+
+# 7b. WordPress REST API (user enumeration)
+check_filter "nginx-wp-rest" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /wp-json/wp/v2/users HTTP/1.1" 200 150'
+check_filter "nginx-wp-rest" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "GET /wp-json/yoast HTTP/1.1" 200 150'
 
 echo "------------------------------------------------"
 echo "Check complete."
