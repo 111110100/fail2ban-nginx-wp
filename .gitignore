@@ -1,0 +1,23 @@
+# Sensitive credentials
+.env
+
+# Logs
+*.log
+
+# Fail2Ban database
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.bak
