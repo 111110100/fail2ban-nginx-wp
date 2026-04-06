@@ -15,6 +15,8 @@ All notable changes to this project will be documented in this file.
 - **Added `.gitignore`**: Prevents accidental commits of `.env`, `*.log`, `*.sqlite3` files
 - **Idempotent UFW rules**: Running `harden.sh` multiple times won't create duplicate Cloudflare IP allow rules
 - **Error handling**: Critical operations (UFW enable, Fail2Ban restart) now exit on failure instead of continuing silently
+- **Auto-generated snippets**: `harden.sh` now creates both `cloudflare-ips.conf` and `security-traps.conf` in `/etc/nginx/snippets/`
+- **Dynamic MY_IP injection**: WP-Cron allow rule in `security-traps.conf` automatically includes your home IP from `.env`
 
 ### Script Improvements
 - **Strict mode**: All scripts now use `set -euo pipefail` for better error detection

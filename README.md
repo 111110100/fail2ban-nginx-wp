@@ -154,7 +154,13 @@ will delete banned IPs from Cloudflare if they're older than 7 days
       # ... rest of your config
   }
   ```
-- **SECURITY TRAPS**: Ensure Nginx domain configs also include `include snippets/security-traps.conf;` for honeypot endpoints.
+- **SECURITY TRAPS**: The `harden.sh` script automatically creates `/etc/nginx/snippets/security-traps.conf` with honeypot endpoints, XML-RPC blocking, and WP-Cron protection. Include it in your server {} block:
+  ```nginx
+  server {
+      include snippets/security-traps.conf;
+      # ... rest of your config
+  }
+  ```
 - **NGINX REAL IP HEADER**: The `cloudflare-ips.conf` snippet above handles this automatically. Manual configuration reference:
   <details>
   <summary>Cloudflare real_ip configuration (click to expand)</summary>
