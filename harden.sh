@@ -264,7 +264,8 @@ location ~* (\\.sql|\\.bak|\\.backup|\\.old|\\.tar|\\.zip) {
 }
 
 # KILL SWITCH: Block XML-RPC (Common attack vector)
-location ~* xmlrpc\\.php {
+# Uses ^~ to beat regex location ~ \.php$ (PHP-FPM handler)
+location ^~ /xmlrpc.php {
     access_log /var/log/nginx/honeypot.log;
     return 403;
 }
