@@ -125,9 +125,11 @@ EOF
 echo "Configuring WordPress Login Filters..."
 cat > /etc/fail2ban/filter.d/nginx-wp-login.conf <<'EOF'
 [Definition]
-# Match POST logins (200) and repeated GET admin attempts (302)
-failregex = ^<HOST> -.*"POST /wp-login\.php HTTP/.*" 200
-            ^<HOST> -.*"GET /wp-admin/index\.php HTTP/.*" 302
+# Match POST login attempts (any status: 200=success, 401=failed, 302=redirect)
+failregex = ^<HOST> -.*"(GET|POST) /wp-login\.php(?:\?.*)? HTTP/.*" (?:200|302|401)
+            # Match GET /wp-admin/ redirects (302) — indicates unauthenticated access
+            ^<HOST> -.*"GET /wp-admin/(?:index\.php)? HTTP/.*" 302
+ignoreregex =
 EOF
 
 echo "Configuring WordPress WP-Cron Filters..."

@@ -35,3 +35,6 @@ All notable changes to this project will be documented in this file.
 |-----------|-----------|-----------|----------|---------|
 | `nginx-wp-rest` | 3 | 600s | 86400s | WordPress REST API user enumeration |
 | `nginx-dir-list` | 2 | 600s | 86400s | Directory index enumeration (nginx error log) |
+
+### Filter Fixes
+- **`nginx-wp-login`**: Now matches POST with 401 (failed login), GET `/wp-login.php` with query params (redirect loops), and `GET /wp-admin/` with 302. Previously only caught POST 200 and GET `/wp-admin/index.php` 302 — missing ~72% of brute-force hits in real attack logs.

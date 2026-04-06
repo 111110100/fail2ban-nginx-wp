@@ -60,6 +60,9 @@ check_filter "nginx-sensitive-files" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "
 # 5. WordPress Login
 check_filter "nginx-wp-login" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "POST /wp-login.php HTTP/1.1" 200 150'
 check_filter "nginx-wp-login" '62.60.130.227 - - [04/Apr/2026:21:28:24 +0000] "GET /wp-admin/index.php HTTP/1.1" 302 5'
+check_filter "nginx-wp-login" '150.136.62.9 - - [06/Apr/2026:11:05:10 +0000] "POST /wp-login.php HTTP/1.1" 401 3420 "https://zerowastepaste.com.au/wp-login.php"'
+check_filter "nginx-wp-login" '150.136.62.9 - - [06/Apr/2026:11:05:15 +0000] "GET /wp-login.php?redirect_to=https%3A%2F%2Fzerowastepaste.com.au%2Fwp-admin%2Findex.php&reauth=1 HTTP/1.1" 200 2951'
+check_filter "nginx-wp-login" '150.136.62.9 - - [06/Apr/2026:11:05:12 +0000] "GET /wp-admin/ HTTP/1.1" 302 5'
 
 # 5b. WordPress WP-Cron
 check_filter "nginx-wp-cron" '1.2.3.4 - - [10/Mar/2026:20:00:01 +1100] "POST /wp-cron.php HTTP/1.1" 200 150'
