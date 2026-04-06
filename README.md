@@ -147,8 +147,15 @@ You can also schedule them using a cron:
 will delete banned IPs from Cloudflare if they're older than 7 days
 
 ## IMPORTANT NOTES
-- **REAL IP**: Ensure Nginx domain configs include `include snippets/security-traps.conf;`.
-- **NGINX REAL IP HEADER**: Nginx real_ip_header should be enabled and configured. Add this to your `nginx.conf` `http {}` block:
+- **REAL IP**: The `harden.sh` script automatically creates `/etc/nginx/snippets/cloudflare-ips.conf` which configures `real_ip_header CF-Connecting-IP` and whitelists all Cloudflare IP ranges. Include it in your server {} block:
+  ```nginx
+  server {
+      include snippets/cloudflare-ips.conf;
+      # ... rest of your config
+  }
+  ```
+- **SECURITY TRAPS**: Ensure Nginx domain configs also include `include snippets/security-traps.conf;` for honeypot endpoints.
+- **NGINX REAL IP HEADER**: The `cloudflare-ips.conf` snippet above handles this automatically. Manual configuration reference:
   <details>
   <summary>Cloudflare real_ip configuration (click to expand)</summary>
 
