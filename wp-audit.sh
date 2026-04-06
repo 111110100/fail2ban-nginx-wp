@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 # ==============================================================================
 # WORDPRESS SECURITY & UPDATE AUDITOR
 # ==============================================================================
@@ -191,7 +193,20 @@ case "$OUTPUT_FORMAT" in
         ;;
     csv)
         echo "Timestamp,Path,CoreCurrent,CoreAvailable,PluginUpdates,ThemeUpdates,ChecksumErrors,NonStandardFiles,WP_Debug,WorldWritable"
-        echo "$(date '+%Y-%m-%d %H:%M:%S'),$WP_PATH,$CORE_CURRENT,$([ "$CORE_STATUS" = "outdated" ] && echo "$CORE_NEW" || echo "up-to-date"),$PLUGIN_UPDATES_COUNT,$THEME_UPDATES_COUNT,$CHECKSUM_ERRORS,$(echo "$NON_STANDARD_FILES" | grep -v '^$' | wc -l),$DEBUG_MODE,$WRITABLE_FILES"
+        # Properly quote all fields to handle commas and special characters
+        NON_STD_COUNT=$(echo "$NON_STANDARD_FILES" | grep -v '^$' | wc -l | tr -d ' ')
+        CORE_AVAILABLE="$([ "$CORE_STATUS" = "outdated" ] && echo "$CORE_NEW" || echo "up-to-date")"
+        printf '"%s","%s","%s","%s","%s","%s","%s","%s","%s","%s"\n' \
+            "$(date '+%Y-%m-%d %H:%M:%S')" \
+            "$WP_PATH" \
+            "$CORE_CURRENT" \
+            "$CORE_AVAILABLE" \
+            "$PLUGIN_UPDATES_COUNT" \
+            "$THEME_UPDATES_COUNT" \
+            "$CHECKSUM_ERRORS" \
+            "$NON_STD_COUNT" \
+            "$DEBUG_MODE" \
+            "$WRITABLE_FILES"
         ;;
     *)
         echo -e "------------------------------------------------"
