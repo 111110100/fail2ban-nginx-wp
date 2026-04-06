@@ -1,6 +1,10 @@
 # Sensitive credentials
 .env
 
+# AI agent skill folders
+.gemini/
+GEMINI.md
+
 # Logs
 *.log
 
