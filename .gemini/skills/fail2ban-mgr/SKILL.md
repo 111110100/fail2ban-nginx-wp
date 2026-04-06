@@ -26,6 +26,7 @@ When adding or updating filters in `/etc/fail2ban/filter.d/`:
 - **Local (UFW)**: Use `sudo ufw status numbered` or `sudo fail2ban-client status <jail>`.
 - **Global (Cloudflare)**: Use `./cf-manage.sh list` or `./cf-manage.sh info <IP>`.
 - **Cleanup**: Schedule periodic purges of old bans using `./cf-manage.sh clean <DAYS>`.
+- **Health Check**: Run `./healthcheck.sh` to verify all components are operational.
 
 ## Key Resources
 - **Jail reference**: See [jails.md](references/jails.md) for thresholds and ban times.
