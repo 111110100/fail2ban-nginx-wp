@@ -3,11 +3,20 @@
 set -euo pipefail
 
 # --- CONFIGURATION ---
-# Load from .env file if it exists, otherwise use defaults
+# Load from .env file (current directory, then home directory)
 ENV_FILE="$(dirname "$0")/.env"
 if [[ -f "$ENV_FILE" ]]; then
     # shellcheck source=.env
     source "$ENV_FILE"
+else
+    ENV_FILE="$HOME/.env"
+    if [[ -f "$ENV_FILE" ]]; then
+        # shellcheck source=.env
+        source "$ENV_FILE"
+    else
+        echo "WARNING: No .env file found in script directory or $HOME."
+        echo "Please create one with CF_ACCOUNT_ID, CF_API_TOKEN, and MY_IP."
+    fi
 fi
 
 CF_ACCOUNT_ID="${CF_ACCOUNT_ID:-}"

@@ -116,10 +116,15 @@ fi
 
 # 5. Cloudflare API Connectivity
 echo -e "\n${YELLOW}Cloudflare API${NC}"
-# Load .env if available
+# Load .env if available (current directory, then home directory)
 ENV_FILE="$(dirname "$0")/.env"
 if [[ -f "$ENV_FILE" ]]; then
     source "$ENV_FILE"
+else
+    ENV_FILE="$HOME/.env"
+    if [[ -f "$ENV_FILE" ]]; then
+        source "$ENV_FILE"
+    fi
 fi
 
 if [[ -n "${CF_ACCOUNT_ID:-}" && -n "${CF_API_TOKEN:-}" ]]; then
